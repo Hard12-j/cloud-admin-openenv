@@ -1,3 +1,12 @@
+---
+title: Cloud Admin OpenEnv
+emoji: ☁️
+colorFrom: blue
+colorTo: indigo
+sdk: docker
+pinned: false
+---
+
 # Cloud Infrastructure Manager (OpenEnv)
 
 ## Description
