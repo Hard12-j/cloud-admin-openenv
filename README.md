@@ -26,9 +26,9 @@ uvicorn server.app:app --host 0.0.0.0 --port 8000
 ## AI Inference Baseline
 Run the baseline AI agent that interacts with the app locally:
 ```cmd
-set HF_TOKEN=your_hugging_face_token
-set API_BASE_URL=https://api-inference.huggingface.co/v1/
-set MODEL_NAME=meta-llama/Meta-Llama-3-8B-Instruct
+set HF_TOKEN=your_groq_api_key
+set API_BASE_URL=https://api.groq.com/openai/v1
+set MODEL_NAME=llama3-8b-8192
 
 python inference.py
 ```
