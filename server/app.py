@@ -7,3 +7,7 @@ from .environment import CloudEnvironment
 from models import CloudAction, CloudObservation
 
 app = create_fastapi_app(CloudEnvironment, CloudAction, CloudObservation)
+
+@app.get("/")
+def root():
+    return {"status": "ok", "message": "OpenEnv Cloud Admin Simulator is running"}
