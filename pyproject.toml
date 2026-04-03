@@ -15,3 +15,6 @@ dependencies = [
     "pydantic",
     "openai"
 ]
+
+[project.scripts]
+server = "server.app:main"
