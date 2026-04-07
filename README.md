@@ -37,7 +37,7 @@ Run the baseline AI agent that interacts with the app locally:
 ```cmd
 set HF_TOKEN=your_groq_api_key
 set API_BASE_URL=https://api.groq.com/openai/v1
-set MODEL_NAME=llama3-8b-8192
+set MODEL_NAME=llama-3.1-8b-instant
 
 python inference.py
 ```
