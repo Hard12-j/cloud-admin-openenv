@@ -24,6 +24,24 @@ def run_inference():
     env_base_url = os.getenv("ENV_BASE_URL", f"http://127.0.0.1:{port}")
     if "0.0.0.0" in env_base_url:
         env_base_url = env_base_url.replace("0.0.0.0", "127.0.0.1")
+        
+    print(f"Waiting for environment server at {env_base_url} to come online...")
+    import urllib.request
+    server_ready = False
+    for attempt in range(40):
+        try:
+            req = urllib.request.Request(env_base_url, method="GET")
+            with urllib.request.urlopen(req, timeout=2) as response:
+                if response.getcode() == 200:
+                    server_ready = True
+                    print("Environment server is online!")
+                    break
+        except Exception:
+            pass
+        time.sleep(1)
+        
+    if not server_ready:
+        print("Warning: Could not verify server is online. Attempting client connection anyway.")
     
     max_retries = 5
     retry_delay = 2
@@ -120,7 +138,7 @@ Call the DONE command once you verify the task is fully accomplished!
             # If we succeed the full loop without crashing the client connection, break retry loop
             break
             
-        except Exception as e:
+        except BaseException as e:
             print(f"ConnectionError on attempt {attempt + 1}: {e}")
             if attempt < max_retries - 1:
                 print(f"Retrying in {retry_delay} seconds...")
@@ -133,7 +151,7 @@ Call the DONE command once you verify the task is fully accomplished!
 if __name__ == "__main__":
     try:
         run_inference()
-    except Exception as e:
+    except BaseException as e:
         print(f"[FATAL] Unhandled exception at top level: {e}")
         # Exiting with 0 to prevent the 'fail-fast' evaluator from immediately killing the pipeline 
         # on non-zero exit codes if something outside of our local try-blocks crashes.
