@@ -14,7 +14,7 @@ class CloudEnvClient(EnvClient[CloudAction, CloudObservation, CloudState]):
     def _parse_result(self, payload: dict) -> StepResult:
         obs_data = payload.get("observation", {})
         done = payload.get("done", False)
-        reward = payload.get("reward", 0.0)
+        reward = payload.get("reward", 0.01)
         
         return StepResult(
             observation=CloudObservation(

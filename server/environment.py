@@ -58,7 +58,7 @@ class CloudEnvironment(Environment):
 
         return CloudObservation(
             done=False,
-            reward=0.0,
+            reward=0.01,
             message=message,
             outputs=None
         )
@@ -73,7 +73,7 @@ class CloudEnvironment(Environment):
         message = f"Command {command} executed successfully."
         outputs = None
         done = False
-        reward = 0.0
+        reward = 0.01
 
         if self._state.step_count >= self._state.max_steps:
              done = True
@@ -126,9 +126,9 @@ class CloudEnvironment(Environment):
             elif command == "DONE":
                 done = True
                 reward = self._calculate_reward()
-                if reward == 1.0:
+                if reward >= 0.99:
                     message = "Task completed successfully! Perfect score."
-                elif reward > 0.0:
+                elif reward > 0.01:
                     message = f"Task partially completed. Score: {reward}"
                 else:
                     message = "Task failed."
@@ -140,7 +140,7 @@ class CloudEnvironment(Environment):
 
         return CloudObservation(
             done=done,
-            reward=reward if done else 0.0,
+            reward=reward if done else 0.01,
             message=message,
             outputs=outputs
         )
@@ -149,19 +149,19 @@ class CloudEnvironment(Environment):
         if self._state.difficulty == "easy":
             # Task: stop the temporary instance
             temp_instances = [r for r in self._state.resources.values() if r.get("tags", {}).get("purpose") == "temporary"]
-            if not temp_instances: return 0.0 # Error state
+            if not temp_instances: return 0.01 # Error state
             # 1.0 if stopped or terminated
             if temp_instances[0]["status"] in ["stopped", "terminated"]:
-                return 1.0
-            return 0.0
+                return 0.99
+            return 0.01
 
         elif self._state.difficulty == "medium":
             # Task: make public-assets private
             bucket = next((r for r in self._state.resources.values() if r.get("name") == "public-assets"), None)
-            if not bucket: return 0.0
+            if not bucket: return 0.01
             if bucket["public_access"] == False:
-                return 1.0
-            return 0.0
+                return 0.99
+            return 0.01
 
         elif self._state.difficulty == "hard":
             # Task: disable hacker123 AND terminate their instance
@@ -170,12 +170,12 @@ class CloudEnvironment(Environment):
             i_terminated = hack_inst and hack_inst["status"] == "terminated"
 
             if u_disabled and i_terminated:
-                return 1.0
+                return 0.99
             elif u_disabled or i_terminated:
                 return 0.5
-            return 0.0
+            return 0.01
             
-        return 0.0
+        return 0.01
 
     @property
     def state(self) -> CloudState:
