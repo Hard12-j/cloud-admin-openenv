@@ -20,9 +20,9 @@ This is a standard OpenEnv-based project simulating an AWS/GCP administrative ta
 `CloudObservation(message=str, outputs=List[dict])`
 
 ## Tasks Graded
-* **Easy:** Stop a temporary instance based on its tags. (Reward 1.0)
-* **Medium:** Ensure an S3 bucket named 'public-assets' has public access disabled. (Reward 1.0)
-* **Hard:** Disable a compromised user and terminate their associated instance. (Reward: 0.5 partial, 1.0 full)
+* **Easy:** Stop a temporary instance based on its tags. (Reward 0.99)
+* **Medium:** Ensure an S3 bucket named 'public-assets' has public access disabled. (Reward 0.99)
+* **Hard:** Disable a compromised user and terminate their associated instance. (Reward: 0.5 partial, 0.99 full)
 
 ## Setup & Run
 This environment requires `openenv-core`.
