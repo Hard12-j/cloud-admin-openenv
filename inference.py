@@ -19,7 +19,7 @@ def run_inference():
     
     # We use a mocked/local server URL if not provided by hackathon grader
     # The hackathon usually passes the URL or starts it nearby
-    port = os.getenv("PORT", "8000")
+    port = os.getenv("PORT", "7860")
     env_base_url = os.getenv("ENV_BASE_URL", f"http://127.0.0.1:{port}")
     if "0.0.0.0" in env_base_url:
         env_base_url = env_base_url.replace("0.0.0.0", "127.0.0.1")

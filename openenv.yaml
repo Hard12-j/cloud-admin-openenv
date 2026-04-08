@@ -4,4 +4,4 @@ description: "An isolated cloud infrastructure simulation for testing AI admin a
 server:
   entrypoint: "server.app:app"
   host: "127.0.0.1"
-  port: 8000
+  port: 7860
