@@ -3,5 +3,5 @@ name: "cloud-admin-simulator"
 description: "An isolated cloud infrastructure simulation for testing AI admin agents."
 server:
   entrypoint: "server.app:app"
-  host: "127.0.0.1"
+  host: "0.0.0.0"
   port: 7860
