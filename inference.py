@@ -27,21 +27,31 @@ def run_inference():
         
     print(f"Waiting for environment server at {env_base_url} to come online...")
     import urllib.request
+    
+    # Convert ws:// to http:// for the readiness ping to prevent urllib exceptions
+    ping_url = env_base_url
+    if ping_url.startswith("ws://"):
+        ping_url = "http://" + ping_url[5:]
+    elif ping_url.startswith("wss://"):
+        ping_url = "https://" + ping_url[6:]
+        
     server_ready = False
     for attempt in range(40):
         try:
-            req = urllib.request.Request(env_base_url, method="GET")
+            req = urllib.request.Request(ping_url, method="GET")
             with urllib.request.urlopen(req, timeout=2) as response:
                 if response.getcode() == 200:
                     server_ready = True
                     print("Environment server is online!")
                     break
-        except Exception:
+        except Exception as e:
             pass
+        import time
         time.sleep(1)
         
     if not server_ready:
-        print("Warning: Could not verify server is online. Attempting client connection anyway.")
+        print("[FATAL] Server did not come online within 40 seconds. Skipping client connection to prevent async thread crash.")
+        sys.exit(0)
     
     max_retries = 5
     retry_delay = 2

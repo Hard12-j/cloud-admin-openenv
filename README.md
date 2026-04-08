@@ -29,7 +29,7 @@ This environment requires `openenv-core`.
 
 ```bash
 pip install -r requirements.txt
-uvicorn server.app:app --host 0.0.0.0 --port 8000
+uvicorn server.app:app --host 0.0.0.0 --port 7860
 ```
 
 ## AI Inference Baseline
