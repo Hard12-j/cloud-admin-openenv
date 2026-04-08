@@ -14,7 +14,9 @@ def root():
     return {"status": "ok", "message": "OpenEnv Cloud Admin Simulator is running"}
 
 def main():
-    uvicorn.run("server.app:app", host="0.0.0.0", port=7860)
+    #uvicorn.run("server.app:app", host="0.0.0.0", port=7860)
+    port = int(os.getenv("PORT", "8000"))
+    uvicorn.run("server.app:app", host="[IP_ADDRESS]", port=port)
 
 if __name__ == "__main__":
     main()
