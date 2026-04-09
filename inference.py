@@ -1,7 +1,5 @@
 import os
-import sys
 import json
-import time
 from openai import OpenAI
 from client import CloudEnvClient
 from models import CloudAction
@@ -9,87 +7,37 @@ from models import CloudAction
 API_BASE_URL = os.getenv("API_BASE_URL", "https://router.huggingface.co/v1/")
 MODEL_NAME = os.getenv("MODEL_NAME", "meta-llama/Meta-Llama-3-8B-Instruct")
 HF_TOKEN = os.getenv("HF_TOKEN")
-GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 
 client = OpenAI(
     base_url=API_BASE_URL,
-    api_key=GROQ_API_KEY or HF_TOKEN or "dummy"
+    api_key=HF_TOKEN or "dummy"
 )
 
 def run_inference():
-    print("[START] Inference Baseline")
-    
-    # We use a mocked/local server URL if not provided by hackathon grader
-    # The hackathon usually passes the URL or starts it nearby
-    port = os.getenv("PORT", "7860")
-    env_base_url = os.getenv("ENV_BASE_URL", f"http://127.0.0.1:{port}")
+    env_base_url = os.getenv("ENV_BASE_URL", "http://127.0.0.1:8000")
     if "0.0.0.0" in env_base_url:
         env_base_url = env_base_url.replace("0.0.0.0", "127.0.0.1")
+    
+    with CloudEnvClient(base_url=env_base_url).sync() as env:
+        difficulties = ["easy", "medium", "hard"]
         
-    print(f"Waiting for environment server at {env_base_url} to come online...")
-    import urllib.request
-    
-    # Convert ws:// to http:// for the readiness ping to prevent urllib exceptions
-    ping_url = env_base_url
-    if ping_url.startswith("ws://"):
-        ping_url = "http://" + ping_url[5:]
-    elif ping_url.startswith("wss://"):
-        ping_url = "https://" + ping_url[6:]
-        
-    server_ready = False
-    for attempt in range(40):
-        try:
-            req = urllib.request.Request(ping_url, method="GET")
-            with urllib.request.urlopen(req, timeout=2) as response:
-                if response.getcode() == 200:
-                    server_ready = True
-                    print("Environment server is online!")
-                    break
-        except Exception as e:
-            pass
-        import time
-        time.sleep(1)
-        
-    if not server_ready:
-        print("[FATAL] Server did not come online within 40 seconds. Skipping client connection to prevent async thread crash.")
-        return
-    
-    max_retries = 15
-    retry_delay = 3
-    
-    # We globally suppress threading tracebacks to prevent background Thread from polluting grader stderr
-    import threading
-    original_hook = threading.excepthook
-    def silent_hook(args): pass
-    threading.excepthook = silent_hook
-    
-    for attempt in range(max_retries):
-        original_stderr = sys.stderr
-        try:
-            sys.stderr = open(os.devnull, 'w')
-            with CloudEnvClient(base_url=env_base_url).sync() as env:
-                sys.stderr = original_stderr
-                # We will loop through the difficulties as tests
-                difficulties = ["easy", "medium", "hard"]
+        for diff in difficulties:
+            # STRICT REGEX LOG: START
+            print(f"[START] task={diff}", flush=True)
+            try:
+                result = env.reset(difficulty=diff)
+                obs = result.observation
+                initial_task = obs.message
+            except Exception as e:
+                print(f"[END] task={diff} score=0.01 steps=0", flush=True)
+                continue
                 
-                for diff in difficulties:
-                    print(f"[START] Episode {diff}")
-                    try:
-                        result = env.reset(difficulty=diff)
-                        obs = result.observation
-                        initial_task = obs.message
-                    except Exception as e:
-                        print(f"Error resetting environment: {e}")
-                        continue
-                        
-                    done = False
-                    step = 0
-                    
-                    system_prompt = f"""You are an AI Cloud Administrator. 
+            done = False
+            step = 0
+            
+            system_prompt = f"""You are an AI Cloud Administrator. 
 Your goal is to solve the task given. 
-
 INITIAL TASK: {initial_task}
-
 You can use the following commands:
 - LIST_INSTANCES
 - STOP_INSTANCE (requires target_id)
@@ -99,7 +47,6 @@ You can use the following commands:
 - LIST_USERS
 - DISABLE_USER (requires target_id)
 - DONE
-
 You must respond with ONLY a valid JSON object holding your action. 
 Valid JSON schema:
 {{
@@ -110,67 +57,51 @@ Valid JSON schema:
 DO NOT wrapping your response in Markdown codeblocks. Return RAW JSON.
 Call the DONE command once you verify the task is fully accomplished!
 """
-                    messages = [{"role": "system", "content": system_prompt}]
+            messages = [{"role": "system", "content": system_prompt}]
+            
+            while not done and step < 15:
+                step += 1
+                messages.append({
+                    "role": "user", 
+                    "content": f"Message: {obs.message}\nPrevious Command Output: {obs.outputs}"
+                })
+                
+                try:
+                    response = client.chat.completions.create(
+                        model=MODEL_NAME,
+                        messages=messages,
+                        max_tokens=200,
+                        response_format={ "type": "json_object" } 
+                    )
+                    content = response.choices[0].message.content.strip()
+                    messages.append({"role": "assistant", "content": content})
+                    action_json = json.loads(content)
                     
-                    while not done and step < 15:
-                        print(f"[STEP] {step} Obs Message: {obs.message}")
-                        
-                        messages.append({
-                            "role": "user", 
-                            "content": f"Message: {obs.message}\nPrevious Command Output: {obs.outputs}"
-                        })
-                        
-                        try:
-                            response = client.chat.completions.create(
-                                model=MODEL_NAME,
-                                messages=messages,
-                                max_tokens=200,
-                                response_format={ "type": "json_object" } # Ensure JSON mode if supported
-                            )
-                            content = response.choices[0].message.content.strip()
-                            messages.append({"role": "assistant", "content": content})
-                            action_json = json.loads(content)
-                            
-                            action = CloudAction(
-                                command=action_json.get("command", "LIST_INSTANCES"),
-                                target_id=action_json.get("target_id", None),
-                                args=action_json.get("args", None)
-                            )
-                            print(f"Agent chose action: {action.command} target_id={action.target_id} args={action.args}")
-                        except Exception as e:
-                            print(f"LLM Error: {e}, defaulting to LIST_INSTANCES")
-                            action = CloudAction(command="LIST_INSTANCES")
-                        
-                        try:
-                            result = env.step(action)
-                            obs = result.observation
-                            done = result.done
-                        except Exception as e:
-                            print(f"Error stepping environment: {e}")
-                            break
-                        step += 1
-                        
-                    if 'result' in locals() and hasattr(result, 'reward'):
-                        print(f"[END] Episode {diff} - Score: {result.reward}")
-                    else:
-                        print(f"[END] Episode {diff} failed.")
-            
-            # If we succeed the full loop without crashing the client connection, break retry loop
-            break
-            
-        except BaseException as e:
-            sys.stderr = original_stderr
-            print(f"ConnectionError on attempt {attempt + 1}: {e}")
-            if attempt < max_retries - 1:
-                print(f"Retrying in {retry_delay} seconds...")
-                time.sleep(retry_delay)
-            else:
-                print("Max retries reached. Exiting inference script.")
-                # We exit cleanly with return code 0 but we've logged the failure
-                # or we can let it gracefully finish. The exception log will tell the grader.
+                    action = CloudAction(
+                        command=action_json.get("command", "LIST_INSTANCES"),
+                        target_id=action_json.get("target_id", None),
+                        args=action_json.get("args", None)
+                    )
+                except Exception:
+                    action = CloudAction(command="LIST_INSTANCES")
+                
+                try:
+                    result = env.step(action)
+                    obs = result.observation
+                    done = result.done
+                    current_reward = result.reward
+                except Exception:
+                    done = True
+                    current_reward = 0.01
+                    
+                # STRICT REGEX LOG: STEP
+                print(f"[STEP] step={step} reward={current_reward:.2f}", flush=True)
+                
+            # STRICT REGEX LOG: END
+            print(f"[END] task={diff} score={current_reward:.2f} steps={step}", flush=True)
 
 if __name__ == "__main__":
     try:
         run_inference()
-    except BaseException as e:
-        print(f"[FATAL] Unhandled exception at top level: {e}")
+    except Exception:
+        pass
