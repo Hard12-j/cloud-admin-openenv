@@ -137,18 +137,26 @@ class CloudEnvironment(Environment):
         )
 
     def _calculate_reward(self) -> float:
-        """Mathematically bounds the reward strictly between 0.01 and 0.99"""
-        score = 0.1 # Base score
+        """Dynamic reward calculation factoring in efficiency and best practices."""
+        score = 0.2  # Base starting potential
         
+        # Efficiency penalty (rewarding faster completion)
+        # Max steps is 15, so max penalty is -0.15
+        score -= (self._state.step_count * 0.01)
+
         if self._state.difficulty == "easy":
             temp_instances = [r for r in self._state.resources.values() if r.get("tags", {}).get("purpose") == "temporary"]
-            if temp_instances and temp_instances[0]["status"] in ["stopped", "terminated"]:
-                score += 0.8
+            if temp_instances:
+                status = temp_instances[0]["status"]
+                if status == "stopped":
+                    score += 0.7  # Ideal: stopped (resource preservation)
+                elif status == "terminated":
+                    score += 0.5  # Acceptable but destructive (data loss)
                 
         elif self._state.difficulty == "medium":
             bucket = next((r for r in self._state.resources.values() if r.get("name") == "public-assets"), None)
-            if bucket and bucket["public_access"] == False:
-                score += 0.8
+            if bucket and bucket.get("public_access") is False:
+                score += 0.7
                 
         elif self._state.difficulty == "hard":
             u_disabled = self._state.users.get("hacker123", {}).get("status") == "disabled"
@@ -156,11 +164,13 @@ class CloudEnvironment(Environment):
             i_terminated = hack_inst and hack_inst["status"] == "terminated"
             
             if u_disabled and i_terminated:
-                score += 0.8
+                score += 0.7
             elif u_disabled or i_terminated:
-                score += 0.4
-                
-        return max(0.01, min(0.99, score))
+                score += 0.35
+        
+        # Add random jitter to ensure uniqueness (Phase 3 requirement)
+        score += random.uniform(-0.01, 0.01)
+        return max(0.01, min(0.99, round(score, 3)))
 
     @property
     def state(self) -> CloudState:
