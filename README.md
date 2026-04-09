@@ -33,11 +33,31 @@ uvicorn server.app:app --host 0.0.0.0 --port 7860
 ```
 
 ## AI Inference Baseline
-Run the baseline AI agent that interacts with the app locally:
+Run the baseline AI agent that interacts with the app locally.
+
+**For Linux/Mac (Bash):**
+```bash
+export HF_TOKEN="your_groq_api_key"
+export API_BASE_URL="https://api.groq.com/openai/v1"
+export MODEL_NAME="llama-3.1-8b-instant"
+
+python inference.py
+```
+
+**For Windows Command Prompt (CMD):**
 ```cmd
 set HF_TOKEN=your_groq_api_key
 set API_BASE_URL=https://api.groq.com/openai/v1
 set MODEL_NAME=llama-3.1-8b-instant
+
+python inference.py
+```
+
+**For Windows PowerShell:**
+```powershell
+$env:HF_TOKEN="your_groq_api_key"
+$env:API_BASE_URL="https://api.groq.com/openai/v1"
+$env:MODEL_NAME="llama-3.1-8b-instant"
 
 python inference.py
 ```
