@@ -14,7 +14,13 @@ class CloudEnvClient(EnvClient[CloudAction, CloudObservation, CloudState]):
     def _parse_result(self, payload: dict) -> StepResult:
         obs_data = payload.get("observation", {})
         done = payload.get("done", False)
-        reward = payload.get("reward", 0.01)
+        # Ensure reward is never 0.0, even if server returns it
+        reward = payload.get("reward")
+        if reward is None or (isinstance(reward, (int, float)) and reward <= 0):
+            reward = 0.01
+        elif isinstance(reward, (int, float)) and reward >= 1.0:
+            reward = 0.99
+        reward = float(reward)
         
         return StepResult(
             observation=CloudObservation(

@@ -160,7 +160,8 @@ class CloudEnvironment(Environment):
             elif u_disabled or i_terminated:
                 score += 0.4
                 
-        return max(0.01, min(0.99, score))
+        # DOUBLE CLAMP: Ensure it NEVER hits 0.0 or 1.0
+        return float(max(0.01, min(0.99, score)))
 
     @property
     def state(self) -> CloudState:

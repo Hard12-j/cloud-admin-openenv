@@ -13,6 +13,14 @@ client = OpenAI(
     api_key=HF_TOKEN or "dummy"
 )
 
+def clamp_score(score):
+    """Guarantees score is strictly between 0 and 1 by clamping to [0.01, 0.99]"""
+    try:
+        val = float(score)
+        return max(0.01, min(0.99, val))
+    except (ValueError, TypeError):
+        return 0.01
+
 def run_inference():
     print("[START] Inference Baseline", flush=True)
     
@@ -104,21 +112,24 @@ Respond with ONLY RAW JSON: {{"command": "...", "target_id": "...", "args": "...
                             done = True
                             
                         # Grader expects [STEP] step=N reward=R
-                        print(f"[STEP] step={step} reward={current_reward:.2f}", flush=True)
+                        clamped_r = clamp_score(current_reward)
+                        print(f"[STEP] step={step} reward={clamped_r:.2f}", flush=True)
                     
                     # Grader expects [END] task=NAME score=S steps=N
-                    print(f"[END] task={diff} score={current_reward:.2f} steps={step}", flush=True)
+                    clamped_s = clamp_score(current_reward)
+                    print(f"[END] task={diff} score={clamped_s:.2f} steps={step}", flush=True)
 
                 except Exception as e:
                     print(f"# Episode Error: {e}", flush=True)
-                    print(f"[END] task={diff} score=0.01 steps=0", flush=True)
+                    score_val = clamp_score(0.01)
+                    print(f"[END] task={diff} score={score_val:.2f} steps=0", flush=True)
 
     except Exception as e:
         print(f"[FATAL] Connection failed: {e}", flush=True)
-        # Still print some [END] blocks so grader sees valid sequence if it expects it
         for diff in ["easy", "medium", "hard"]:
              print(f"[START] task={diff}", flush=True)
-             print(f"[END] task={diff} score=0.01 steps=0", flush=True)
+             score_val = clamp_score(0.01)
+             print(f"[END] task={diff} score={score_val:.2f} steps=0", flush=True)
 
 if __name__ == "__main__":
     run_inference()
